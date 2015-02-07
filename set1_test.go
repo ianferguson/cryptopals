@@ -9,6 +9,7 @@ import (
 )
 
 // Challenge 1 converts a provided hex string to binary and then from binary to base64, verifying its result
+// http://cryptopals.com/sets/1/challenges/1/
 func TestSet1Challenge1(test *testing.T) {
 	input := "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
 	output := "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
@@ -22,6 +23,7 @@ func TestSet1Challenge1(test *testing.T) {
 }
 
 // Challenge 2 takes tow inputs and xor's them together
+// http://cryptopals.com/sets/1/challenges/2/
 func TestSet1Challenge2(test *testing.T) {
 	input1 := "1c0111001f010100061a024b53535009181c"
 	input2 := "686974207468652062756c6c277320657965"
