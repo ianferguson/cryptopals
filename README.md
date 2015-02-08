@@ -4,5 +4,5 @@
 
 Solutions to the Matasano Cryptopals challenges, written while learning Go.
 
-For documentation, check [![GoDoc](https://godoc.org/github.com/codahale/http-handlers/debug?status.svg)](https://godoc.org/github.com/codahale/http-handlers/debug)
+For documentation, check [![GoDoc](https://godoc.org/github.com/ianferguson/cryptopals?status.svg)](https://godoc.org/github.com/ianferguson/cryptopals)
 
