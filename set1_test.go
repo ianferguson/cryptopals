@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"testing"
 	"unicode"
 )
@@ -37,6 +40,8 @@ func TestSet1Challenge2(test *testing.T) {
 	}
 }
 
+// Challenge 3 is to crack a hex string that has been xor'd with a 1 byte key
+// http://cryptopals.com/sets/1/challenges/3/
 func TestSet1Challenge3(test *testing.T) {
 	hexInput := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 	output := decodeSingleCharXor(hexToBytes(hexInput))
@@ -47,6 +52,34 @@ func TestSet1Challenge3(test *testing.T) {
 
 	if output.key != 'X' {
 		test.Errorf("expected the key to be guessed as 'A' but was %q", output.key)
+	}
+}
+
+// Challenge 4 is to locate the 1 string within 60 hex snippets that is a
+// an english string xor'd with a 1 byte key
+// http://cryptopals.com/sets/1/challenges/4/
+func TestSet1Challenge4(test *testing.T) {
+	response, e := http.Get("http://cryptopals.com/static/challenge-data/4.txt")
+	if e != nil {
+		panic(e)
+	}
+	defer response.Body.Close()
+	codes, e := ioutil.ReadAll(response.Body)
+	if e != nil {
+		panic(e)
+	}
+
+	expected := "Now that the party is jumping\n"
+	var found string
+	for _, code := range strings.Split(string(codes), "\n") {
+		s := decodeSingleCharXor(hexToBytes(code))
+		if s.score > 4.6 {
+			found = s.text
+		}
+	}
+
+	if found != expected {
+		test.Errorf("expected clear text to be found with message %v but found %v", expected, found)
 	}
 }
 
@@ -70,7 +103,6 @@ func decodeSingleCharXor(bytes []byte) *solution {
 		if score > bestSolution.score {
 			bestSolution = &solution{score, decrypted, rune(key)}
 		}
-		fmt.Printf("%v: %q\n", score, decrypted)
 	}
 	return bestSolution
 }
@@ -113,8 +145,8 @@ func score(s string) float64 {
 	for _, r := range s {
 		// penalize heavily for non printable characters, since they are pretty good indicators
 		// that the bytes being examined are not english/characters
-		if !unicode.IsPrint(r) {
-			score -= 120
+		if r > 255 {
+			score -= 240
 		} else {
 			score += runeFreq[unicode.ToUpper(r)]
 		}
