@@ -6,6 +6,17 @@ import (
 	"unicode"
 )
 
+// Encrypt takes a plaintext (p) of bytes and a key (k) of a variable number of bytes
+// and xors the plaintext with the provided key, with the key being repeated as
+// necessary if the plaintext is longer than the key
+func Encrypt(p []byte, k []byte) []byte {
+	c := make([]byte, len(p))
+	for i := range p {
+		c[i] = p[i] ^ k[i%len(k)]
+	}
+	return c
+}
+
 type Solution struct {
 	Score float64
 	Text  string

@@ -68,6 +68,8 @@ func TestSet1Challenge4(test *testing.T) {
 	}
 
 	expected := "Now that the party is jumping\n"
+	// BUG(ian) assumes that 1 and only 1 string in the input text, should probably accumulate all
+	// qualifying strings in a slice
 	var found string
 	for _, code := range strings.Split(string(codes), "\n") {
 		s := xorcipher.CrackSimple(encodings.HexToBytes(code))
@@ -79,4 +81,19 @@ func TestSet1Challenge4(test *testing.T) {
 	if found != expected {
 		test.Errorf("expected clear text to be found with message %v but found %v", expected, found)
 	}
+}
+
+// Challenge 5 is to implement a function that applies a multi byte key to a plaintext cyclically
+func TestSet1Challenge5(test *testing.T) {
+	input := "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"
+	expected := "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272" +
+		"a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
+	key := []byte("ICE")
+	ciphertext := xorcipher.Encrypt([]byte(input), key)
+	hextext := encodings.BytesToHex(ciphertext)
+
+	if hextext != expected {
+		test.Errorf("Expected %v but got %v", expected, hextext)
+	}
+
 }
