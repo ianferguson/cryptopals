@@ -3,7 +3,6 @@
 package xorcipher
 
 import (
-	"fmt"
 	"unicode"
 )
 
@@ -16,7 +15,6 @@ type Solution struct {
 // Crack Simple will attempt to find the best 1 byte key that a provided ciphertext
 // has been xor'd with and returns a Solution detailing that result
 func CrackSimple(bytes []byte) *Solution {
-
 	best := new(Solution)
 	for key := 0; key < 256; key++ {
 		xord := make([]byte, len(bytes))
@@ -69,7 +67,7 @@ var runeFreq = map[rune]float64{
 func score(s string) float64 {
 	score := 0.0
 	for _, r := range s {
-		// penalize heavily for non printable characters, since they are pretty good indicators
+		// penalize heavily for non-ascii characters, since they are pretty good indicators
 		// that the bytes being examined are not english/characters
 		if r > 255 {
 			score -= 240
@@ -78,17 +76,4 @@ func score(s string) float64 {
 		}
 	}
 	return score / float64(len(s))
-}
-
-func xor(a []byte, b []byte) []byte {
-	if len(a) != len(b) {
-		panic(fmt.Sprintf("array a and b had differing lengths (%v and %v respectievely", len(a), len(b)))
-	}
-
-	l := len(a)
-	out := make([]byte, l)
-	for i := 0; i < len(a); i++ {
-		out[i] = a[i] ^ b[i]
-	}
-	return out
 }
