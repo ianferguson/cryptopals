@@ -12,7 +12,9 @@ import (
 
 // Encrypt takes a plaintext (p) of bytes and a key (k) of a variable number of bytes
 // and xors the plaintext with the provided key, with the key being repeated as
-// necessary if the plaintext is longer than the key
+// necessary if the plaintext is longer than the key.
+// This function also serves to decrypt ciphertexts encrypted using this function:
+// i.e. Encrypt(Encrypt(p, k), k) == p
 func Encrypt(p []byte, k []byte) []byte {
 	c := make([]byte, len(p))
 	for i := range p {
@@ -78,7 +80,8 @@ func Crack(c []byte) []byte {
 	return Encrypt(c, key)
 }
 
-// TODO, make this actually readable....
+// TODO, make this actually readable, using slices to trim down blocks and consume them
+// rather than accessing a single slice via indexes would probably be a nice start
 func keyLength(c []byte) int {
 	bestLength, bestDist := 0, math.MaxFloat64
 	// test all key lengths from 2 to 48, looking for one with the lowest edit distance
