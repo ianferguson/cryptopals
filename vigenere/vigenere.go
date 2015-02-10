@@ -80,8 +80,9 @@ func Crack(c []byte) []byte {
 	return Encrypt(c, key)
 }
 
-// TODO, make this actually readable, using slices to trim down blocks and consume them
-// rather than accessing a single slice via indexes would probably be a nice start
+// KeyLength attempts to guess the key length of a multibyte vigenere encrypted ciphertext
+// by finding a keylength with the smallest hamming edit distance between slices of the ciphertext
+// of size key length
 func keyLength(c []byte) int {
 	bestLength, bestDist := 0, math.MaxFloat64
 	// test all key lengths from 2 to 48, looking for one with the lowest edit distance
@@ -89,14 +90,15 @@ func keyLength(c []byte) int {
 	for kl := 2; kl < 48; kl++ {
 		// compare the 1st to the 2nd block, 2nd to 3rd and so on, and then average the total edit distance
 		// by the number of comparisons made
+		cSlice := c
 		aggregateDist := 0
 		comparisons := 0
-		for i := 0; (i+2)*kl < len(c); i++ {
-			first := c[i*kl : (i+1)*kl]
-			second := c[(i+1)*kl : (i+2)*kl]
-			aggregateDist += hamming.Distance(first, second)
+		for len(cSlice) > kl*2 {
+			aggregateDist += hamming.Distance(cSlice[:kl], cSlice[kl:kl*2])
+			cSlice = cSlice[kl:]
 			comparisons++
 		}
+
 		// first average to the avg dist of a key size block
 		dist := float64(aggregateDist) / float64(comparisons)
 		// then average by the keysize to get get an average edit distance per byte
