@@ -2,8 +2,6 @@
 
 [![Build Status](https://travis-ci.org/ianferguson/cryptopals.svg)](https://travis-ci.org/ianferguson/cryptopals)
 
-[![Coverage Status](https://coveralls.io/repos/ianferguson/cryptopals/badge.svg)](https://coveralls.io/r/ianferguson/cryptopals)
-
 Solutions to the Matasano Cryptopals challenges, written while learning Go.
 
 For documentation, check the GoDocs:
