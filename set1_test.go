@@ -2,12 +2,13 @@
 package cryptopals
 
 import (
-	"github.com/ianferguson/cryptopals/encodings"
-	"github.com/ianferguson/cryptopals/xorcipher"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/ianferguson/cryptopals/encodings"
+	"github.com/ianferguson/cryptopals/vigenere"
 )
 
 // Challenge 1 converts a provided hex string to binary and then from binary to base64, verifying its result
@@ -42,14 +43,14 @@ func TestSet1Challenge2(test *testing.T) {
 // http://cryptopals.com/sets/1/challenges/3/
 func TestSet1Challenge3(test *testing.T) {
 	hexInput := "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
-	output := xorcipher.CrackSimple(encodings.HexToBytes(hexInput))
+	output := vigenere.CrackSimple(encodings.HexToBytes(hexInput))
 	expected := "Cooking MC's like a pound of bacon"
 	if output.Text != expected {
-		test.Errorf("expected the input to decode to %v but got %v instead", expected, output.Text)
+		test.Errorf("expected the input to decode to %v but got %q instead", expected, output.Text)
 	}
 
 	if output.Key != 'X' {
-		test.Errorf("expected the key to be guessed as 'A' but was %q", output.Key)
+		test.Errorf("expected the key to be guessed as 'X' but was %q", output.Key)
 	}
 }
 
@@ -57,43 +58,138 @@ func TestSet1Challenge3(test *testing.T) {
 // an english string xor'd with a 1 byte key
 // http://cryptopals.com/sets/1/challenges/4/
 func TestSet1Challenge4(test *testing.T) {
-	response, e := http.Get("http://cryptopals.com/static/challenge-data/4.txt")
-	if e != nil {
-		panic(e)
-	}
-	defer response.Body.Close()
-	codes, e := ioutil.ReadAll(response.Body)
-	if e != nil {
-		panic(e)
-	}
-
+	text := get("http://cryptopals.com/static/challenge-data/4.txt")
 	expected := "Now that the party is jumping\n"
 	// BUG(ian) assumes that 1 and only 1 string in the input text, should probably accumulate all
 	// qualifying strings in a slice
 	var found string
-	for _, code := range strings.Split(string(codes), "\n") {
-		s := xorcipher.CrackSimple(encodings.HexToBytes(code))
-		if s.Score > 4.6 {
+	for _, code := range strings.Split(text, "\n") {
+		s := vigenere.CrackSimple(encodings.HexToBytes(code))
+		if s.Score < 0.025 {
 			found = s.Text
 		}
 	}
 
 	if found != expected {
-		test.Errorf("expected clear text to be found with message %v but found %v", expected, found)
+		test.Errorf("expected clear text to be found with message %v but found %q", expected, found)
 	}
 }
 
 // Challenge 5 is to implement a function that applies a multi byte key to a plaintext cyclically
+// http://cryptopals.com/sets/1/challenges/5/
 func TestSet1Challenge5(test *testing.T) {
 	input := "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal"
 	expected := "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272" +
 		"a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
 	key := []byte("ICE")
-	ciphertext := xorcipher.Encrypt([]byte(input), key)
+	ciphertext := vigenere.Encrypt([]byte(input), key)
 	hextext := encodings.BytesToHex(ciphertext)
-
 	if hextext != expected {
 		test.Errorf("Expected %v but got %v", expected, hextext)
 	}
 
+}
+
+// Challenge 6 requires detecting the key length of a plaintext xor'd
+// with a fixed key, and then cracking that key
+// http://cryptopals.com/sets/1/challenges/6/
+func TestSet1Challenge6(test *testing.T) {
+	ciphertext := get("http://cryptopals.com/static/challenge-data/6.txt")
+	expected := "I'm back and I'm ringin' the bell \n" +
+		"A rockin' on the mike while the fly girls yell \n" +
+		"In ecstasy in the back of me \n" +
+		"Well that's my DJ Deshay cuttin' all them Z's \n" +
+		"Hittin' hard and the girlies goin' crazy \n" +
+		"Vanilla's on the mike, man I'm not lazy. \n" +
+		"\n" +
+		"I'm lettin' my drug kick in \n" +
+		"It controls my mouth and I begin \n" +
+		"To just let it flow, let my concepts go \n" +
+		"My posse's to the side yellin', Go Vanilla Go! \n" +
+		"\n" +
+		"Smooth 'cause that's the way I will be \n" +
+		"And if you don't give a damn, then \n" +
+		"Why you starin' at me \n" +
+		"So get off 'cause I control the stage \n" +
+		"There's no dissin' allowed \n" +
+		"I'm in my own phase \n" +
+		"The girlies sa y they love me and that is ok \n" +
+		"And I can dance better than any kid n' play \n" +
+		"\n" +
+		"Stage 2 -- Yea the one ya' wanna listen to \n" +
+		"It's off my head so let the beat play through \n" +
+		"So I can funk it up and make it sound good \n" +
+		"1-2-3 Yo -- Knock on some wood \n" +
+		"For good luck, I like my rhymes atrocious \n" +
+		"Supercalafragilisticexpialidocious \n" +
+		"I'm an effect and that you can bet \n" +
+		"I can take a fly girl and make her wet. \n" +
+		"\n" +
+		"I'm like Samson -- Samson to Delilah \n" +
+		"There's no denyin', You can try to hang \n" +
+		"But you'll keep tryin' to get my style \n" +
+		"Over and over, practice makes perfect \n" +
+		"But not if you're a loafer. \n" +
+		"\n" +
+		"You'll get nowhere, no place, no time, no girls \n" +
+		"Soon -- Oh my God, homebody, you probably eat \n" +
+		"Spaghetti with a spoon! Come on and say it! \n" +
+		"\n" +
+		"VIP. Vanilla Ice yep, yep, I'm comin' hard like a rhino \n" +
+		"Intoxicating so you stagger like a wino \n" +
+		"So punks stop trying and girl stop cryin' \n" +
+		"Vanilla Ice is sellin' and you people are buyin' \n" +
+		"'Cause why the freaks are jockin' like Crazy Glue \n" +
+		"Movin' and groovin' trying to sing along \n" +
+		"All through the ghetto groovin' this here song \n" +
+		"Now you're amazed by the VIP posse. \n" +
+		"\n" +
+		"Steppin' so hard like a German Nazi \n" +
+		"Startled by the bases hittin' ground \n" +
+		"There's no trippin' on mine, I'm just gettin' down \n" +
+		"Sparkamatic, I'm hangin' tight like a fanatic \n" +
+		"You trapped me once and I thought that \n" +
+		"You might have it \n" +
+		"So step down and lend me your ear \n" +
+		"'89 in my time! You, '90 is my year. \n" +
+		"\n" +
+		"You're weakenin' fast, YO! and I can tell it \n" +
+		"Your body's gettin' hot, so, so I can smell it \n" +
+		"So don't be mad and don't be sad \n" +
+		"'Cause the lyrics belong to ICE, You can call me Dad \n" +
+		"You're pitchin' a fit, so step back and endure \n" +
+		"Let the witch doctor, Ice, do the dance to cure \n" +
+		"So come up close and don't be square \n" +
+		"You wanna battle me -- Anytime, anywhere \n" +
+		"\n" +
+		"You thought that I was weak, Boy, you're dead wrong \n" +
+		"So come on, everybody and sing this song \n" +
+		"\n" +
+		"Say -- Play that funky music Say, go white boy, go white boy go \n" +
+		"play that funky music Go white boy, go white boy, go \n" +
+		"Lay down and boogie and play that funky music till you die. \n" +
+		"\n" +
+		"Play that funky music Come on, Come on, let me hear \n" +
+		"Play that funky music white boy you say it, say it \n" +
+		"Play that funky music A little louder now \n" +
+		"Play that funky music, white boy Come on, Come on, Come on \n" +
+		"Play that funky music \n"
+	p := string(vigenere.Crack(encodings.Base64ToBytes(ciphertext)))
+	if p != expected {
+		test.Errorf("expected: %v\nbut got: %q", expected, p)
+	}
+}
+
+// wrapper for getting a plaintext url, panicing if any problems come up
+func get(url string) string {
+	response, e := http.Get(url)
+	if e != nil {
+		panic(e)
+	}
+	defer response.Body.Close()
+	bytes, e := ioutil.ReadAll(response.Body)
+	if e != nil {
+		panic(e)
+	}
+	return string(bytes)
 }
