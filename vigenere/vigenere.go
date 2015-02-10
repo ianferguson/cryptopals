@@ -21,10 +21,20 @@ func Encrypt(p []byte, k []byte) []byte {
 	return c
 }
 
+// Solution contains members describing a potential solution for a chunk of text
+// that has all been xor'd with the same byte value.
 type Solution struct {
+
+	// Score is a floating point value representing the relative quality of a given
+	// Solution's key. Lower scores are better, and 0 is the lowest possible score
 	Score float64
-	Text  string
-	Key   rune
+
+	// Text is what the problem's input bytes appear as when xor'd with this
+	// Solution's Key and cast to a (UTF-8) string
+	Text string
+
+	// Key is the rune that the input ciphertext/text block was xor'd with
+	Key rune
 }
 
 func (s *Solution) String() string {
