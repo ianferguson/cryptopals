@@ -130,6 +130,48 @@ func TestSet1Challenge7(test *testing.T) {
 	}
 }
 
+// I initially approached this by looking for strings that had unusually low
+// hamming distances between slices of 16 bytes, but the answer I got didn't seem
+// to line up with other solutions when I checked, so I switched to taking the provided
+// hint more literally and look for identical blocks within a 16 byte slice
+func TestSet1Challenge8(test *testing.T) {
+	input := get("http://cryptopals.com/static/challenge-data/8.txt")
+	found := false
+	for i, line := range strings.Split(input, "\n") {
+		bytes := encodings.HexToBytes(line)
+
+		// for a larger sample data set, probably would be better to keep actual counts of duplicate
+		// bytes and work from there, but for the sample provided just finding a single duplicate is good enough
+		previouslySeen := make(map[[16]byte]bool)
+		for len(bytes) >= 16 {
+			chunk := take16Bytes(&bytes)
+			if previouslySeen[chunk] {
+				test.Logf("line %v appears to be encrypted using AES-128 in EBC mode", i)
+				found = true
+				break
+			}
+			previouslySeen[chunk] = true
+		}
+	}
+
+	if !found {
+		test.Error("Expected to find at least one line likely to be encrypted with AES-128 in EBC mode, but did not")
+	}
+}
+
+// a little hurdle jumping to be able to get a 16 byte slice into a [16]byte so that
+// it can be used as the key in a map.
+// will chomp off the first 16 bytes of the provided slice and return them
+func take16Bytes(b *[]byte) [16]byte {
+	var chunk [16]byte
+	slice := *b
+	for i := range chunk {
+		chunk[i] = slice[i]
+	}
+	*b = slice[16:]
+	return chunk
+}
+
 // wrapper for getting a plaintext url, panicing if any problems come up
 func get(url string) string {
 	response, e := http.Get(url)
