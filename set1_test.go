@@ -59,7 +59,7 @@ func TestSet1Challenge3(test *testing.T) {
 // an english string xor'd with a 1 byte key
 // http://cryptopals.com/sets/1/challenges/4/
 func TestSet1Challenge4(test *testing.T) {
-	text := get("http://cryptopals.com/static/challenge-data/4.txt")
+	text := getURL("http://cryptopals.com/static/challenge-data/4.txt")
 	expected := "Now that the party is jumping\n"
 	// BUG(ian) assumes that 1 and only 1 string in the input text, should probably accumulate all
 	// qualifying strings in a slice
@@ -94,7 +94,7 @@ func TestSet1Challenge5(test *testing.T) {
 // with a fixed key, and then cracking that key
 // http://cryptopals.com/sets/1/challenges/6/
 func TestSet1Challenge6(test *testing.T) {
-	ciphertext := get("http://cryptopals.com/static/challenge-data/6.txt")
+	ciphertext := getURL("http://cryptopals.com/static/challenge-data/6.txt")
 	expected := whiteboy
 	p := string(vigenere.Crack(encodings.Base64ToBytes(ciphertext)))
 	if p != expected {
@@ -110,7 +110,7 @@ func TestSet1Challenge7(test *testing.T) {
 		panic(err)
 	}
 
-	ciphertext := encodings.Base64ToBytes(get("http://cryptopals.com/static/challenge-data/7.txt"))
+	ciphertext := encodings.Base64ToBytes(getURL("http://cryptopals.com/static/challenge-data/7.txt"))
 	decrypted := make([]byte, len(ciphertext))
 	bs := aes.BlockSize()
 	// use the slices like queue's and keep consuming a blocksize
@@ -135,7 +135,7 @@ func TestSet1Challenge7(test *testing.T) {
 // to line up with other solutions when I checked, so I switched to taking the provided
 // hint more literally and look for identical blocks within a 16 byte slice
 func TestSet1Challenge8(test *testing.T) {
-	input := get("http://cryptopals.com/static/challenge-data/8.txt")
+	input := getURL("http://cryptopals.com/static/challenge-data/8.txt")
 	found := false
 	for i, line := range strings.Split(input, "\n") {
 		bytes := encodings.HexToBytes(line)
@@ -173,7 +173,8 @@ func take16Bytes(b *[]byte) [16]byte {
 }
 
 // wrapper for getting a plaintext url, panicing if any problems come up
-func get(url string) string {
+// TODO move this to another file
+func getURL(url string) string {
 	response, e := http.Get(url)
 	if e != nil {
 		panic(e)
