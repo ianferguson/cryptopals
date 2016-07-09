@@ -6,8 +6,8 @@ package hamming
 // both a and b must be of the same length or a panic will ensue
 func Distance(a []byte, b []byte) int {
 	if len(a) != len(b) {
-		// TODO this should reall just use a multiple return and include an Error object
-		// even if its going to panic, it should really be pancing with an Error object
+		// TODO this should really just use a multiple return and include an Error object
+		// even if its going to panic, it should really be panicing with an Error object
 		// not a string
 		panic("cannot compute a hamming distance for arrays of differing length")
 	}
