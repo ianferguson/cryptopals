@@ -1,13 +1,16 @@
 package cryptopals
 
 import (
-	"crypto/aes"
+	"crypto/rand"
 	"fmt"
+	"math/big"
+
 	"strings"
 	"testing"
 
 	"github.com/ianferguson/cryptopals/encodings"
 	"github.com/ianferguson/cryptopals/pkcs7"
+	"github.com/ianferguson/cryptopals/unsafeaes"
 )
 
 func TestChallenge9(test *testing.T) {
@@ -26,7 +29,7 @@ func TestChallenge9(test *testing.T) {
 func TestChallenge10(test *testing.T) {
 	key := []byte("YELLOW SUBMARINE")
 	ciphertext := encodings.Base64ToBytes(getURL("https://cryptopals.com/static/challenge-data/10.txt"))
-	decrypted, err := decryptCBC(ciphertext, key)
+	decrypted, err := unsafeaes.DecryptCBC(ciphertext, key)
 	if err != nil {
 		panic(err)
 	}
@@ -36,50 +39,99 @@ func TestChallenge10(test *testing.T) {
 	}
 }
 
-func decryptCBC(ciphertext []byte, key []byte) (plaintext []byte, err error) {
-	aes, err := aes.NewCipher(key)
+/*
+Now that you have ECB and CBC working:
+
+Write a function to generate a random AES key; that's just 16 random bytes.
+
+Write a function that encrypts data under an unknown key --- that is, a function that generates a random key and encrypts under it.
+
+The function should look like:
+
+encryption_oracle(your-input)
+=> [MEANINGLESS JIBBER JABBER]
+Under the hood, have the function append 5-10 bytes (count chosen randomly) before the plaintext and 5-10 bytes after the plaintext.
+
+Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC the other half (just use random IVs each time for CBC). Use rand(2) to decide which to use.
+
+Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening.
+*/
+func TestChallenge11Cbc(test *testing.T) {
+	plaintext := make([]byte, 256)
+	ciphertext, err := encryptionOracle(plaintext, cbc)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	bs := aes.BlockSize()
-	plaintext = make([]byte, len(ciphertext))
-	chain := make([]byte, bs)
-	p := plaintext
-	pBuf := make([]byte, bs)
-	for len(ciphertext) > 0 {
-		aes.Decrypt(pBuf, ciphertext)
-		copy(p, xor(pBuf, chain))
-		fmt.Printf("%s", xor(pBuf, chain))
-		chain = ciphertext[:bs]
-		ciphertext = ciphertext[bs:]
-		p = p[bs:]
+	mode := unsafeaes.DetectMode(plaintext, ciphertext)
+	if mode != "CBC" {
+		test.Errorf("expected AES mode CBC to be detected but instead detected %s", mode)
 	}
-	return plaintext, nil
 }
 
-// TODO before starting Challenge 11, test that encrypt works as well as decrypt
-func encryptCBC(plaintext []byte, key []byte) (ciphertext []byte, err error) {
-	aes, err := aes.NewCipher(key)
+func TestChallenge11Ebc(test *testing.T) {
+	plaintext := make([]byte, 256)
+	ciphertext, err := encryptionOracle(plaintext, ebc)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
-	bs := aes.BlockSize()
-	ciphertext = make([]byte, len(plaintext))
-	chain := make([]byte, bs)
-	c := ciphertext
-	for len(plaintext) > 0 {
-		// TODO add padding like pkcs7.Pad(plaintext[:bs}, bs)])
-		aes.Encrypt(c, xor(plaintext[:bs], chain))
-		plaintext = plaintext[bs:]
-		chain = c[:bs]
-		c = c[bs:]
+	mode := unsafeaes.DetectMode(plaintext, ciphertext)
+	if mode != "EBC" {
+		test.Errorf("expected AES mode EBC to be detected but instead detected %s", mode)
 	}
-
-	return ciphertext, nil
 }
 
-func TestChallenge11(test *testing.T) {
-	test.Errorf("Challenge 11 not yet implemented")
+type aesmode int
+
+const (
+	ebc aesmode = iota
+	cbc
+	random
+)
+
+// encryptionOracle that lets you optionally specify the aes mode being used,
+// to facilitate verification/testing of the code decyphering the output of the oracle
+func encryptionOracle(input []byte, mode aesmode) (ciphertext []byte, err error) {
+	frontPad := randomBytes(5, 10)
+	backPad := randomBytes(5, 10)
+	plaintext := append(append(frontPad, input...), backPad...)
+	key := key(16)
+	return encryptUsing(mode)(plaintext, key)
+}
+
+func encryptUsing(mode aesmode) func([]byte, []byte) ([]byte, error) {
+	switch mode {
+	case cbc:
+		return unsafeaes.EncryptCBC
+	case ebc:
+		return unsafeaes.EncryptEBC
+	case random:
+		i, err := rand.Int(rand.Reader, big.NewInt(int64(random)))
+		if err != nil {
+			panic(err)
+		}
+		var randomMode aesmode
+		randomMode = aesmode(int(i.Int64()))
+		return encryptUsing(randomMode)
+	}
+	panic(fmt.Sprintf("mode %d is not known", mode))
+}
+
+// XXX not for final commit, sketch space for Set 2, Challenge 11
+func key(size int) []byte {
+	key := make([]byte, size)
+	_, err := rand.Read(key)
+	if err != nil {
+		panic("unreachable")
+	}
+	return key
+}
+
+func randomBytes(min, max int) []byte {
+	random, err := rand.Int(rand.Reader, big.NewInt(int64(max-min)))
+	if err != nil {
+		panic(err)
+	}
+	return make([]byte, random.Add(random, big.NewInt(int64(min))).Int64())
 }
