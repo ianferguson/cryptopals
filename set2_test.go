@@ -2,6 +2,7 @@ package cryptopals
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 
 	"strings"
@@ -107,7 +108,7 @@ func (oracle ecbOracle) Encrypt(input []byte) (ciphertext []byte, err error) {
 func TestChallenge12(test *testing.T) {
 	// Feed identical bytes of your-string to the function 1 at a time --- start with 1 byte ("A"),
 	// then "AA", then "AAA" and so on. Discover the block size of the cipher. You know it, but do this step anyway.
-	oracle := challenge12Oracle{}
+	oracle := challenge12Oracle{key(16)}
 	blockSize, err := unsafeaes.DetectBlockSize(oracle)
 	if err != nil {
 		panic(err)
@@ -127,27 +128,76 @@ func TestChallenge12(test *testing.T) {
 
 	// Knowing the block size, craft an input block that is exactly 1 byte short (for instance, if the block size is
 	// 8 bytes, make "AAAAAAA"). Think about what the oracle function is going to put in that last byte position.
+	shortBlock := make([]byte, blockSize-1)
+	plaintextSize, err := findTextLength(oracle)
+	if err != nil {
+		panic(err)
+	}
+	test.Logf("Oracle's plaintext is %d bytes long", plaintextSize)
 
 	// Make a dictionary of every possible last byte by feeding different strings to the oracle; for instance, "AAAAAAAA",
 	// "AAAAAAAB", "AAAAAAAC", remembering the first block of each invocation.
+	lastbyte := make(map[string]byte)
+
+	// XXX handle 255 without rolling over and missing the loop condition
+	for b := 0; b < 256; b++ {
+		fmt.Printf("Evaluating byte %x\n", b)
+		ciphertext, err := oracle.Encrypt(append(shortBlock, byte(b)))
+		if err != nil {
+			panic(err)
+		}
+		firstBlock := ciphertext[:blockSize]
+		fmt.Printf("Got back %x\n", firstBlock)
+		lastbyte[encodings.BytesToHex(firstBlock)] = byte(b)
+	}
+
+	ciphertext, err := oracle.Encrypt(shortBlock)
+	if err != nil {
+		panic(err)
+	}
 
 	// Match the output of the one-byte-short input to one of the entries in your dictionary.
 	// You've now discovered the first byte of unknown-string.
+	firstBlock := ciphertext[:blockSize]
+	b := lastbyte[encodings.BytesToHex(firstBlock)]
+	test.Logf("found byte %x/%#U for %x", b, rune(b), firstBlock)
 
 	// Repeat for the next byte.
 
 	test.Error("not yet implemented")
 }
 
-type challenge12Oracle struct{}
+func findTextLength(oracle unsafeaes.Oracle) (length int, err error) {
+	maxPadSize := 1024
+	for padSize := 0; padSize < maxPadSize; padSize++ {
+		plaintext := make([]byte, padSize)
+		ciphertext, err := oracle.Encrypt(plaintext)
+		if err != nil {
+			return -1, err
+		}
 
-func (oracle challenge12Oracle) Encrypt(input []byte) (ciphertext []byte, err error) {
-	frontPad := encodings.Base64ToBytes("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" +
+		if length == 0 {
+			length = len(ciphertext)
+		}
+
+		if len(ciphertext) > length {
+			return len(ciphertext) - padSize, nil
+		}
+	}
+
+	return -1, fmt.Errorf("Unable to detect size of hidden text used by oracle, tested up to %d bytes in padding", maxPadSize)
+}
+
+type challenge12Oracle struct {
+	key []byte
+}
+
+func (this challenge12Oracle) Encrypt(input []byte) (ciphertext []byte, err error) {
+	backPad := encodings.Base64ToBytes("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" +
 		"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" +
 		"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg")
-	plaintext := append(append(frontPad, input...))
-	key := key(16)
-	return unsafeaes.EncryptECB(plaintext, key)
+	plaintext := append(input, backPad...)
+	return unsafeaes.EncryptECB(plaintext, this.key)
 }
 
 // XXX below here is not for final commit, sketch space for Set 2, Challenge 11-12
