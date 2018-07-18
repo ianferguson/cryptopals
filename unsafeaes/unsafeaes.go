@@ -5,9 +5,17 @@ package unsafeaes
 import (
 	"bytes"
 	"crypto/aes"
+	"fmt"
 
 	"github.com/ianferguson/cryptopals/pkcs7"
 )
+
+// Oracle will take an input plaintext, possibly prepend and/or append unknown text
+// to the plaintext and then encrypt or otherwise prform an unknown cryptographic
+// operation on the resulting input and return the result
+type Oracle interface {
+	Encrypt(plaintext []byte) (ciphertext []byte, err error)
+}
 
 func DecryptCBC(ciphertext []byte, key []byte) (plaintext []byte, err error) {
 	aes, err := aes.NewCipher(key)
@@ -56,7 +64,7 @@ func EncryptCBC(plaintext []byte, key []byte) (ciphertext []byte, err error) {
 	return ciphertext, nil
 }
 
-func EncryptEBC(plaintext, key []byte) (ciphertext []byte, err error) {
+func EncryptECB(plaintext, key []byte) (ciphertext []byte, err error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -75,21 +83,53 @@ func EncryptEBC(plaintext, key []byte) (ciphertext []byte, err error) {
 	return ciphertext, nil
 }
 
+func DetectBlockSize(oracle Oracle) (blockSize int, err error) {
+	maxTestSize := 1024
+	var size int
+	for i := 1; i <= maxTestSize; i++ {
+		plaintext := make([]byte, i)
+		ciphertext, err := oracle.Encrypt(plaintext)
+		if err != nil {
+			return -1, err
+		}
+		if size == 0 {
+			size = len(ciphertext)
+		}
+		if len(ciphertext) > size {
+			return len(ciphertext) - size, nil
+		}
+
+	}
+	return -1, fmt.Errorf("Unable to detect blocksize used by oracle, tested up to %d bytes", maxTestSize)
+}
+
 // look for repeating blocks in the output text -- since we fed a series of 0's to it, ECB will result
 // in at least 2 duplicate blocks existing, while CBC will not.
-// this is obviously wildly O(n^2) inefficient, but will work for now
-func DetectMode(plaintext, ciphertext []byte) string {
-	keySize := 16
-	blocks := (len(ciphertext) / keySize) + 1
+// this is obviously wildly O(n^2) inefficient, but will work for now,
+// I'm fairly sure that just checking if two consecutive blocks are the same would
+// be enough
+func DetectMode(oracle Oracle) (mode string, err error) {
+	blockSize, err := DetectBlockSize(oracle)
+	if err != nil {
+		return "", err
+	}
+
+	plaintext := make([]byte, blockSize*3)
+	ciphertext, err := oracle.Encrypt(plaintext)
+	if err != nil {
+		return "", err
+	}
+
+	blocks := (len(ciphertext) / blockSize) + 1
 	seen := make([][]byte, 0, blocks)
-	for i := 0; i < len(ciphertext); i += keySize {
-		block := ciphertext[i : i+keySize]
+	for i := 0; i < len(ciphertext); i += blockSize {
+		block := ciphertext[i : i+blockSize]
 		for _, seenBlock := range seen {
 			if bytes.Equal(block, seenBlock) {
-				return "EBC"
+				return "ECB", nil
 			}
 		}
 		seen = append(seen, block)
 	}
-	return "CBC"
+	return "CBC", nil
 }
