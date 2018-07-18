@@ -128,43 +128,52 @@ func TestChallenge12(test *testing.T) {
 
 	// Knowing the block size, craft an input block that is exactly 1 byte short (for instance, if the block size is
 	// 8 bytes, make "AAAAAAA"). Think about what the oracle function is going to put in that last byte position.
-	shortBlock := make([]byte, blockSize-1)
 	plaintextSize, err := findTextLength(oracle)
 	if err != nil {
 		panic(err)
 	}
 	test.Logf("Oracle's plaintext is %d bytes long", plaintextSize)
+	// round up to the nearest full block size, so we have enough capacity
+	// in our chosen text to slurp up the target text char by char
+	blocks := (plaintextSize / blockSize) + 1
+	plaintext := make([]byte, 0, plaintextSize)
+	for i := 1; i <= plaintextSize; i++ {
+		chosentext := make([]byte, (blocks*blockSize)-i)
+		// Make a dictionary of every possible last byte by feeding different strings to the oracle; for instance, "AAAAAAAA",
+		// "AAAAAAAB", "AAAAAAAC", remembering the first block of each invocation.
+		lastbyte := make(map[string]byte)
 
-	// Make a dictionary of every possible last byte by feeding different strings to the oracle; for instance, "AAAAAAAA",
-	// "AAAAAAAB", "AAAAAAAC", remembering the first block of each invocation.
-	lastbyte := make(map[string]byte)
+		for b := 0; b < 256; b++ {
+			knowntext := append(chosentext, plaintext...)
+			testtext := append(knowntext, byte(b))
+			ciphertext, err := oracle.Encrypt(testtext)
+			if err != nil {
+				panic(err)
+			}
+			firstBlock := ciphertext[:blocks*blockSize]
+			lastbyte[encodings.BytesToHex(firstBlock)] = byte(b)
+		}
 
-	// XXX handle 255 without rolling over and missing the loop condition
-	for b := 0; b < 256; b++ {
-		fmt.Printf("Evaluating byte %x\n", b)
-		ciphertext, err := oracle.Encrypt(append(shortBlock, byte(b)))
+		ciphertext, err := oracle.Encrypt(chosentext)
 		if err != nil {
 			panic(err)
 		}
-		firstBlock := ciphertext[:blockSize]
-		fmt.Printf("Got back %x\n", firstBlock)
-		lastbyte[encodings.BytesToHex(firstBlock)] = byte(b)
+
+		// Match the output of the one-byte-short input to one of the entries in your dictionary.
+		// You've now discovered the first byte of unknown-string.
+		firstBlock := ciphertext[:blocks*blockSize]
+		b := lastbyte[encodings.BytesToHex(firstBlock)]
+		plaintext = append(plaintext, b)
+		test.Logf("%s", plaintext)
 	}
 
-	ciphertext, err := oracle.Encrypt(shortBlock)
-	if err != nil {
-		panic(err)
+	expected := "# Rollin' in my 5.0\n" +
+		"With my rag-top down so my hair can blow\n" +
+		"The girlies on standby waving just to say hi\n" +
+		"Did you stop? No, I just drove by"
+	if string(plaintext) != expected {
+		test.Errorf("Expected:\n%s\nActual:\n%s\n", expected, string(plaintext))
 	}
-
-	// Match the output of the one-byte-short input to one of the entries in your dictionary.
-	// You've now discovered the first byte of unknown-string.
-	firstBlock := ciphertext[:blockSize]
-	b := lastbyte[encodings.BytesToHex(firstBlock)]
-	test.Logf("found byte %x/%#U for %x", b, rune(b), firstBlock)
-
-	// Repeat for the next byte.
-
-	test.Error("not yet implemented")
 }
 
 func findTextLength(oracle unsafeaes.Oracle) (length int, err error) {
