@@ -104,10 +104,7 @@ func DetectBlockSize(oracle Oracle) (blockSize int, err error) {
 }
 
 // look for repeating blocks in the output text -- since we fed a series of 0's to it, ECB will result
-// in at least 2 duplicate blocks existing, while CBC will not.
-// this is obviously wildly O(n^2) inefficient, but will work for now,
-// I'm fairly sure that just checking if two consecutive blocks are the same would
-// be enough
+// in at least 2 consecutive duplicate blocks existing, while CBC will not.
 func DetectMode(oracle Oracle) (mode string, err error) {
 	blockSize, err := DetectBlockSize(oracle)
 	if err != nil {
@@ -120,16 +117,15 @@ func DetectMode(oracle Oracle) (mode string, err error) {
 		return "", err
 	}
 
-	blocks := (len(ciphertext) / blockSize) + 1
-	seen := make([][]byte, 0, blocks)
-	for i := 0; i < len(ciphertext); i += blockSize {
-		block := ciphertext[i : i+blockSize]
-		for _, seenBlock := range seen {
-			if bytes.Equal(block, seenBlock) {
-				return "ECB", nil
-			}
+	previous := ciphertext[:blockSize]
+	ciphertext = ciphertext[blockSize:]
+	for len(ciphertext) > blockSize {
+		next := ciphertext[:blockSize]
+		if bytes.Equal(next, previous) {
+			return "ECB", nil
 		}
-		seen = append(seen, block)
+		ciphertext = ciphertext[blockSize:]
+		previous = next
 	}
 	return "CBC", nil
 }
