@@ -132,7 +132,7 @@ func TestChallenge12(test *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	test.Logf("Oracle's plaintext is %d bytes long", plaintextSize)
+
 	// round up to the nearest full block size, so we have enough capacity
 	// in our chosen text to slurp up the target text char by char
 	blocks := (plaintextSize / blockSize) + 1
@@ -166,7 +166,6 @@ func TestChallenge12(test *testing.T) {
 		attackBlocks := ciphertext[:attackSize]
 		decodedByte := lastbyte[encodings.BytesToHex(attackBlocks)]
 		plaintext = append(plaintext, decodedByte)
-		test.Logf("%d: %s", i, plaintext)
 	}
 
 	expected := "Rollin' in my 5.0\n" +
@@ -183,6 +182,7 @@ func findTextLength(oracle unsafeaes.Oracle) (length int, err error) {
 	if err != nil {
 		return -1, err
 	}
+
 	for padSize := 0; padSize < blockSize; padSize++ {
 		plaintext := make([]byte, padSize)
 		ciphertext, err := oracle.Encrypt(plaintext)
