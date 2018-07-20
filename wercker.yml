@@ -4,6 +4,10 @@ box:
     - "5000"
 build:
   steps:
+    - script:
+        name: go get
+        code: |
+          go get -t ./...
     - wercker/golint
     - script:
         name: go build
