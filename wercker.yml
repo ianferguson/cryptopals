@@ -5,6 +5,10 @@ build:
     - wercker/setup-go-workspace:
         package-dir: github.com/ianferguson/cryptopals
     - script:
+        name: go version
+        code: |
+          go version
+    - script:
         name: go get
         code: |
           cd $WERCKER_SOURCE_DIR
