@@ -206,12 +206,12 @@ type challenge12Oracle struct {
 	key []byte
 }
 
-func (this challenge12Oracle) Encrypt(input []byte) (ciphertext []byte, err error) {
+func (oracle challenge12Oracle) Encrypt(input []byte) (ciphertext []byte, err error) {
 	backPad := encodings.Base64ToBytes("Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg" +
 		"aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq" +
 		"dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
 	plaintext := append(input, backPad...)
-	return unsafeaes.EncryptECB(plaintext, this.key)
+	return unsafeaes.EncryptECB(plaintext, oracle.key)
 }
 
 func key(size int) []byte {

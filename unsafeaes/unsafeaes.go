@@ -17,6 +17,8 @@ type Oracle interface {
 	Encrypt(plaintext []byte) (ciphertext []byte, err error)
 }
 
+// DecryptCBC decrypts a provided ciphertext encrypted with AES-CBC mode
+// using the provided key.
 func DecryptCBC(ciphertext []byte, key []byte) (plaintext []byte, err error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
@@ -43,6 +45,7 @@ func DecryptCBC(ciphertext []byte, key []byte) (plaintext []byte, err error) {
 	return plaintext, nil
 }
 
+// EncryptCBC encrypts the provided plaintext using AES in CBC mode using the provided key
 func EncryptCBC(plaintext []byte, key []byte) (ciphertext []byte, err error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
@@ -64,6 +67,7 @@ func EncryptCBC(plaintext []byte, key []byte) (ciphertext []byte, err error) {
 	return ciphertext, nil
 }
 
+// EncryptECB encrypts the provided plaintext using AES in EBC mode
 func EncryptECB(plaintext, key []byte) (ciphertext []byte, err error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
@@ -83,6 +87,8 @@ func EncryptECB(plaintext, key []byte) (ciphertext []byte, err error) {
 	return ciphertext, nil
 }
 
+// DetectBlockSize auto detects the block size (up to 1024 bytes) of the ciphertext returned
+// by an oracle
 func DetectBlockSize(oracle Oracle) (blockSize int, err error) {
 	maxTestSize := 1024
 	var size int
@@ -103,7 +109,10 @@ func DetectBlockSize(oracle Oracle) (blockSize int, err error) {
 	return -1, fmt.Errorf("Unable to detect blocksize used by oracle, tested up to %d bytes", maxTestSize)
 }
 
-// look for repeating blocks in the output text -- since we fed a series of 0's to it, ECB will result
+// DetectMode looks for repeating blocks in the output text to try to determine if a provided encryption oracle
+// is using EBC mode or not
+//
+// since we fed a series of 0's to it, ECB will result
 // in at least 2 consecutive duplicate blocks existing, while CBC will not.
 func DetectMode(oracle Oracle) (mode string, err error) {
 	blockSize, err := DetectBlockSize(oracle)

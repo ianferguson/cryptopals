@@ -43,7 +43,7 @@ func (s *Solution) String() string {
 	return fmt.Sprintf("score: %v,\ntext: %q,\nkey: %q", s.Score, s.Text, s.Key)
 }
 
-// Crack Simple will attempt to find the best 1 byte key that a provided ciphertext
+// CrackSimple will attempt to find the best 1 byte key that a provided ciphertext
 // has been xor'd with and returns a Solution detailing that result
 func CrackSimple(bytes []byte) *Solution {
 	best := &Solution{math.MaxFloat64, "", ' '}
