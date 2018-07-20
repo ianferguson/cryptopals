@@ -1,11 +1,9 @@
 box:
   id: golang
-  ports:
-    - "5000"
 build:
   steps:
     - wercker/setup-go-workspace:
-        package-dir: github.com/ArjenSchwarz/igor
+        package-dir: github.com/ianferguson/cryptopals
     - script:
         name: go get
         code: |
