@@ -7,3 +7,6 @@ notifications:
   email:
     recipients:
       - ian@ianferguson.io
+script:
+  - go test ./...
+  - go lint ./...
