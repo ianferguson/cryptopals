@@ -2,18 +2,23 @@ box:
   id: golang
   ports:
     - "5000"
-build:
-  steps:
+  build:
+    # Sets the go workspace and places package
+    # at the right place in the workspace tree.
+    - wercker/setup-go-workspace:
+      package-dir: github.com/ArjenSchwarz/igor
+      # Get the dependencies
     - script:
-        name: go get
-        code: |
-          go get -t ./...
+      name: go get
+      code: |
+        cd $WERCKER_SOURCE_DIR
+        go get -t ./...
     - wercker/golint
     - script:
-        name: go build
-        code: |
-          go build ./...
+      name: go build
+      code: |
+        go build ./...
     - script:
-        name: go test
-        code: |
-          go test ./...
+      name: go test
+      code: |
+        go test ./...
